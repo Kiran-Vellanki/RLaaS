@@ -1,6 +1,7 @@
-Ratelimiter as a Service. 
+** Ratelimiter as a Service. ** 
 
-Expected flow:
-Client -> Gateway -> Global Filter -> Rule Resolver -> Redis -> Allow/ Deny -> Backend Servicre
+** Expected flow **:
+ Client -> Gateway -> Global Filter -> Rule Resolver -> Redis -> DB Fallback -> Allow/ Deny -> Backend Servicre
 
-In Process...
+* In Process... *
+ 
