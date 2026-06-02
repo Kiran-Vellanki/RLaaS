@@ -1,0 +1,26 @@
+name: FlowGuard CI
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout-code
+        uses: actions/checkout@v2
+      - name: setup-java
+        uses: actions/setup-java@v2
+        with:
+          java-version: 17
+          distribution: temurin
+      - name: build project
+        working-directory: flowguard-core
+        run: mvn clean verify

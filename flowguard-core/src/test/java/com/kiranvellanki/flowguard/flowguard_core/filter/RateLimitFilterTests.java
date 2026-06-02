@@ -1,6 +1,6 @@
 package com.kiranvellanki.flowguard.flowguard_core.filter;
 
-import com.kiranvellanki.flowguard.flowguard_core.service.InMemoryRateLimiterService;
+import com.kiranvellanki.flowguard.flowguard_core.service.RateLimiterService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
@@ -14,10 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class RateLimitFilterTests {
 
-	private final RateLimitFilter filter = new RateLimitFilter(new InMemoryRateLimiterService());
-
 	@Test
 	void rejectsRequestsWithoutApiKey() {
+		RateLimitFilter filter = new RateLimitFilter(clientId -> true);
 		MockServerWebExchange exchange = MockServerWebExchange.from(
 				MockServerHttpRequest.get("/cartService/items").build()
 		);
@@ -30,6 +29,7 @@ class RateLimitFilterTests {
 	@Test
 	void allowsFiveRequestsAndRejectsTheSixthForClientA() {
 		AtomicInteger allowedRequests = new AtomicInteger();
+		RateLimitFilter filter = new RateLimitFilter(new CountingRateLimiterService(5));
 
 		for (int i = 0; i < 5; i++) {
 			MockServerWebExchange exchange = exchangeWithApiKey("clientA");
@@ -45,6 +45,7 @@ class RateLimitFilterTests {
 
 		assertEquals(5, allowedRequests.get());
 		assertEquals(HttpStatus.TOO_MANY_REQUESTS, sixthRequest.getResponse().getStatusCode());
+		assertEquals("60", sixthRequest.getResponse().getHeaders().getFirst("Retry-After"));
 	}
 
 	private MockServerWebExchange exchangeWithApiKey(String apiKey) {
@@ -55,5 +56,21 @@ class RateLimitFilterTests {
 		);
 
 		return (MockServerWebExchange) exchange;
+	}
+
+	private static class CountingRateLimiterService implements RateLimiterService {
+
+		private final int limit;
+
+		private final AtomicInteger count = new AtomicInteger();
+
+		private CountingRateLimiterService(int limit) {
+			this.limit = limit;
+		}
+
+		@Override
+		public boolean allow(String clientId) {
+			return count.incrementAndGet() <= limit;
+		}
 	}
 }
