@@ -1,6 +1,6 @@
 # FlowGuard - Distributed Rate Limiter as a Service
 
-[![Build](https://github.com/Kiran-Vellanki/RLaaS/actions/workflows/build.yml/badge.svg)](https://github.com/Kiran-Vellanki/RLaaS/actions/workflows/build.yml)
+[![Build](https://github.com/Kiran-Vellanki/RLaaS/actions/workflows/build.yaml/badge.svg)](https://github.com/Kiran-Vellanki/RLaaS/actions/workflows/build.yaml)
 
 Spring Boot based distributed rate limiting platform supporting multiple algorithms and Redis-backed enforcement.
 
