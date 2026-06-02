@@ -19,7 +19,7 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
 	}
 
 	@Override
-	public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) throws RuntimeException{
+	public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
 		System.out.println("FlowGuard Intercepted Request");
 
 		String apiKey = exchange.getRequest()
@@ -30,16 +30,12 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
 			exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
 			return exchange.getResponse().setComplete();
 		}
-try{
+
 		if (!rateLimiterService.allow(apiKey)) {
 			exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
+			exchange.getResponse().getHeaders().add("Retry-After", "60");
 			return exchange.getResponse().setComplete();
 		}
-	}catch(RuntimeException e){
-		exchange.getResponse().setStatusCode(HttpStatus.NOT_FOUND);
-
-		return exchange.getResponse().setComplete();
-	}
 
 		return chain.filter(exchange);
 	}
