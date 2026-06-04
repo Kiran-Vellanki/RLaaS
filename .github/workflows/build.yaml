@@ -24,3 +24,4 @@ jobs:
       - name: build project
         working-directory: flowguard-core
         run: mvn clean verify
+        
