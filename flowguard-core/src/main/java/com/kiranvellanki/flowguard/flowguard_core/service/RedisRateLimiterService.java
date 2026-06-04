@@ -1,6 +1,7 @@
 package com.kiranvellanki.flowguard.flowguard_core.service;
 
-import com.kiranvellanki.flowguard.flowguard_core.algorithm.RateLimiterAlgorithm;
+import com.kiranvellanki.flowguard.flowguard_core.algorithm.RateLimiterAlgorithmFactory;
+import com.kiranvellanki.flowguard.flowguard_core.model.RateLimitDecision;
 import com.kiranvellanki.flowguard.flowguard_core.model.RateLimitRule;
 import com.kiranvellanki.flowguard.flowguard_core.resolver.RuleResolver;
 import org.springframework.stereotype.Service;
@@ -10,17 +11,21 @@ public class RedisRateLimiterService implements RateLimiterService {
 
 	private final RuleResolver ruleResolver;
 
-	private final RateLimiterAlgorithm rateLimiterAlgorithm;
+	private final RateLimiterAlgorithmFactory rateLimiterAlgorithmFactory;
 
-	public RedisRateLimiterService(RuleResolver ruleResolver, RateLimiterAlgorithm rateLimiterAlgorithm) {
+	public RedisRateLimiterService(RuleResolver ruleResolver, RateLimiterAlgorithmFactory rateLimiterAlgorithmFactory) {
 		this.ruleResolver = ruleResolver;
-		this.rateLimiterAlgorithm = rateLimiterAlgorithm;
+		this.rateLimiterAlgorithmFactory = rateLimiterAlgorithmFactory;
 	}
 
 	@Override
-	public boolean allow(String clientId) {
+	public RateLimitDecision check(String clientId) {
 		return ruleResolver.getRule(clientId)
-				.map(rateLimiterAlgorithm::allow)
-				.orElse(false);
+				.map(this::check)
+				.orElse(RateLimitDecision.denied(0, 60));
+	}
+
+	private RateLimitDecision check(RateLimitRule rule) {
+		return rateLimiterAlgorithmFactory.get(rule.algorithm()).allow(rule);
 	}
 }
