@@ -66,13 +66,13 @@ public class TokenBucketRedisRateLimiterAlgorithm implements RateLimiterAlgorith
 	public RateLimitDecision allow(RateLimitRule rule) {
 		String tokensKey = "tb:" + rule.clientId() + ":tokens";
 		String timestampKey = "tb:" + rule.clientId() + ":timestamp";
-		double refillPerSecond = (double) rule.limit() / rule.windowSeconds();
+		double refillPerSecond = (double) rule.maxRequests() / rule.windowSeconds();
 		long ttlSeconds = Math.max(rule.windowSeconds() * 2L, 1L);
 
 		List<Long> result = redisTemplate.execute(
 				TOKEN_BUCKET_SCRIPT,
 				List.of(tokensKey, timestampKey),
-				String.valueOf(rule.limit()),
+				String.valueOf(rule.maxRequests()),
 				String.valueOf(refillPerSecond),
 				String.valueOf(System.currentTimeMillis()),
 				String.valueOf(ttlSeconds)
@@ -87,9 +87,9 @@ public class TokenBucketRedisRateLimiterAlgorithm implements RateLimiterAlgorith
 		long retryAfterSeconds = result.get(2);
 
 		if (!allowed) {
-			return RateLimitDecision.denied(rule.limit(), retryAfterSeconds);
+			return RateLimitDecision.denied(rule.maxRequests(), retryAfterSeconds);
 		}
 
-		return RateLimitDecision.allowed(rule.limit(), remaining);
+		return RateLimitDecision.allowed(rule.maxRequests(), remaining);
 	}
 }

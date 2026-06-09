@@ -14,15 +14,14 @@ public class FixedWindowRedisRateLimiterAlgorithm implements RateLimiterAlgorith
 
 	private static final DefaultRedisScript<List> FIXED_WINDOW_SCRIPT = new DefaultRedisScript<>(
 			"""
-			local count = redis.call('INCR', KEYS[1])
-			if count == 1 then
-				redis.call('EXPIRE', KEYS[1], ARGV[1])
-			end
-			local ttl = redis.call('TTL', KEYS[1])
-			return { count, ttl }
-			""",
-			List.class
-	);
+					local count = redis.call('INCR', KEYS[1])
+					if count == 1 then
+						redis.call('EXPIRE', KEYS[1], ARGV[1])
+					end
+					local ttl = redis.call('TTL', KEYS[1])
+					return { count, ttl }
+					""",
+			List.class);
 
 	private final RedisTemplate<String, String> redisTemplate;
 
@@ -41,8 +40,7 @@ public class FixedWindowRedisRateLimiterAlgorithm implements RateLimiterAlgorith
 		List<Long> result = redisTemplate.execute(
 				FIXED_WINDOW_SCRIPT,
 				List.of(key),
-				String.valueOf(rule.windowSeconds())
-		);
+				String.valueOf(rule.windowSeconds()));
 
 		if (result == null || result.size() < 2) {
 			throw new IllegalStateException("Redis did not return a counter value for " + key);
@@ -50,12 +48,12 @@ public class FixedWindowRedisRateLimiterAlgorithm implements RateLimiterAlgorith
 
 		long count = result.get(0);
 		long retryAfterSeconds = Math.max(result.get(1), 0);
-		long remaining = Math.max(rule.limit() - count, 0);
+		long remaining = Math.max(rule.maxRequests() - count, 0);
 
-		if (count > rule.limit()) {
-			return RateLimitDecision.denied(rule.limit(), retryAfterSeconds);
+		if (count > rule.maxRequests()) {
+			return RateLimitDecision.denied(rule.maxRequests(), retryAfterSeconds);
 		}
 
-		return RateLimitDecision.allowed(rule.limit(), remaining);
+		return RateLimitDecision.allowed(rule.maxRequests(), remaining);
 	}
 }
