@@ -1,7 +1,8 @@
 package com.kiranvellanki.flowguard.flowguard_core.controller;
 
 import com.kiranvellanki.flowguard.flowguard_core.model.RateLimitRule;
-import com.kiranvellanki.flowguard.flowguard_core.repository.RuleRepository;
+import com.kiranvellanki.flowguard.flowguard_core.service.AdminRuleService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -14,46 +15,72 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Collection;
+import java.util.List;
 
 @RestController
 @RequestMapping("/admin/rules")
 public class AdminRuleController {
 
-	private final RuleRepository ruleRepository;
-
-	public AdminRuleController(RuleRepository ruleRepository) {
-		this.ruleRepository = ruleRepository;
-	}
+	@Autowired
+	private AdminRuleService adminRuleService;
 
 	@PostMapping
 	public ResponseEntity<RateLimitRule> create(@RequestBody RateLimitRule rule) {
-		return ResponseEntity.status(HttpStatus.CREATED).body(ruleRepository.save(rule));
+		try {
+			RateLimitRule createdRule = adminRuleService.createRule(rule);
+			return ResponseEntity.status(HttpStatus.CREATED).body(createdRule);
+		} catch (IllegalArgumentException e) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+		} catch (RuntimeException e) {
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+		}
 	}
 
 	@GetMapping
-	public Collection<RateLimitRule> getAll() {
-		return ruleRepository.findAll();
+	public ResponseEntity<List<RateLimitRule>> getAll() {
+		try {
+			List<RateLimitRule> rules = adminRuleService.getAllRules();
+			return ResponseEntity.ok(rules);
+		} catch (RuntimeException e) {
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+		}
 	}
 
 	@GetMapping("/{clientId}")
-	public RateLimitRule get(@PathVariable String clientId) {
-		return ruleRepository.findByClientId(clientId)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+	public ResponseEntity<RateLimitRule> get(@PathVariable String clientId) {
+		try {
+			RateLimitRule rule = adminRuleService.getRuleByClientId(clientId);
+			return ResponseEntity.ok(rule);
+		} catch (IllegalArgumentException e) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+		} catch (RuntimeException e) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+		}
 	}
 
 	@PutMapping("/{clientId}")
-	public RateLimitRule update(@PathVariable String clientId, @RequestBody RateLimitRule rule) {
-		RateLimitRule updatedRule = new RateLimitRule(clientId, rule.algorithm(), rule.limit(), rule.windowSeconds());
-		return ruleRepository.save(updatedRule);
+	public ResponseEntity<RateLimitRule> update(@PathVariable String clientId, @RequestBody RateLimitRule rule) {
+		try {
+			RateLimitRule updatedRule = new RateLimitRule(clientId, rule.algorithm(), rule.maxRequests(),
+					rule.windowSeconds());
+			RateLimitRule result = adminRuleService.updateRule(updatedRule);
+			return ResponseEntity.ok(result);
+		} catch (IllegalArgumentException e) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+		} catch (RuntimeException e) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+		}
 	}
 
 	@DeleteMapping("/{clientId}")
 	public ResponseEntity<Void> delete(@PathVariable String clientId) {
-		if (!ruleRepository.deleteByClientId(clientId)) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+		try {
+			adminRuleService.deleteRule(clientId);
+			return ResponseEntity.noContent().build();
+		} catch (IllegalArgumentException e) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+		} catch (RuntimeException e) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
 		}
-
-		return ResponseEntity.noContent().build();
 	}
 }
